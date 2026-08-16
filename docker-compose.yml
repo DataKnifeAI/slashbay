@@ -1,0 +1,28 @@
+services:
+  slashbay:
+    build: .
+    image: slashbay:local
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      SLASHBAY_STATE_DSN: sqlite:////data/slashbay.db
+      SLASHBAY_HOST: 0.0.0.0
+      SLASHBAY_PORT: 8080
+    volumes:
+      - slashbay-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  slashbay-data:

@@ -1,0 +1,15 @@
+# Mirror target: dk-raas/dkai/agents/slashbay
+# GitHub Actions force-pushes main; this file runs if GitLab CI is enabled.
+stages:
+  - test
+
+test:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install -e ".[dev]"
+    - ruff check src tests
+    - pytest -q
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
