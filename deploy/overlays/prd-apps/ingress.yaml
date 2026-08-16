@@ -1,0 +1,29 @@
+# GitHub / GitLab issue webhooks need inbound HTTPS.
+# Same nginx + *.dataknife.net pattern as Coder and MCP servers on prd-apps.
+# TLS uses the ingress controller default certificate (cert-manager wildcard).
+# If slashbay.dataknife.net is not reachable from the public internet, use a
+# Cloudflare Tunnel (high-command-ui) or a webhook relay instead of this Ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: slashbay
+  namespace: slashbay
+  labels:
+    app: slashbay
+    app.kubernetes.io/name: slashbay
+    managed-by: gitops
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: slashbay.dataknife.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: slashbay
+                port:
+                  number: 80

@@ -2,6 +2,7 @@ services:
   slashbay:
     build: .
     image: slashbay:local
+    # Cluster image: harbor.dataknife.net/library/slashbay:latest
     ports:
       - "8080:8080"
     env_file:

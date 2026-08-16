@@ -105,6 +105,37 @@ cp .env.example .env
 docker compose up --build
 ```
 
+## Deploy
+
+GitHub is source of truth. GitLab is the Harbor build mirror only.
+
+```mermaid
+flowchart LR
+    GH[GitHub DataKnifeAI/slashbay] -->|mirror push| GL[GitLab dk-raas/dkai/agents/slashbay]
+    GL -->|BuildKit| H[Harbor library/slashbay]
+    H --> GO[gitops-dev slashbay/overlays/prd-apps]
+    GO -->|Fleet| K[prd-apps ns/slashbay]
+```
+
+| Step | Where | What |
+|------|--------|------|
+| 1 | GitHub Actions | lint + pytest; on `main`, [reusable GitLab mirror](https://github.com/DataKnifeAI/github-workflows) force-pushes `dk-raas/dkai/agents/slashbay` |
+| 2 | GitLab CI | `test` → BuildKit `publish` → Harbor `harbor.dataknife.net/library/slashbay:{latest,sha,tag}` |
+| 3 | GitOps | Fleet applies [gitops-dev](https://github.com/DataKnifeAI/gitops-dev) path `slashbay/overlays/prd-apps` to cluster **prd-apps**, namespace **slashbay** |
+| 4 | Secrets | Create `slashbay-secrets` and `harbor-registry-secret` in that namespace — see [deploy/secrets/README.md](deploy/secrets/README.md) |
+
+This repo ships the same Kustomize tree under [deploy/](deploy/) (github-workflows default `kustomize_path`). **Do not** put Slashbay manifests in `rancher-deploy`. After the first Harbor image exists, pin the tag in **gitops-dev** `deployment.yaml` (siblings pin `high-command-*:v0.N`).
+
+Webhook URLs (nginx Ingress, same `*.dataknife.net` pattern as Coder / MCP):
+
+- `https://slashbay.dataknife.net/webhooks/github`
+- `https://slashbay.dataknife.net/webhooks/gitlab`
+- `https://slashbay.dataknife.net/healthz`
+
+In-cluster: `http://slashbay.slashbay.svc.cluster.local`. If `slashbay.dataknife.net` is not reachable from GitHub/GitLab.com, use a Cloudflare Tunnel (high-command-ui) or a webhook relay — ClusterIP alone cannot receive those hooks.
+
+Required secret keys: `OPENAI_API_KEY`, `CURSOR_API_KEY`, `CODER_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_TOKEN`, `GITLAB_WEBHOOK_TOKEN`, `GITLAB_TOKEN`. Non-secret config is the `slashbay-config` ConfigMap (`CODER_ACCESS_URL` defaults to `https://coder.dataknife.net`). Leave `SLASHBAY_DRY_RUN=true` until secrets and Coder are ready.
+
 ## Layout
 
 ```

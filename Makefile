@@ -1,4 +1,4 @@
-.PHONY: help install test lint run docker-up docker-down
+.PHONY: help install test lint run docker-up docker-down kustomize
 
 help:
 	@echo "install     pip install -e .[dev]"
@@ -7,6 +7,7 @@ help:
 	@echo "run         uvicorn slashbay.app:app --reload --port 8080"
 	@echo "docker-up   docker compose up --build"
 	@echo "docker-down docker compose down"
+	@echo "kustomize   render deploy/overlays/prd-apps"
 
 install:
 	python3 -m pip install -e ".[dev]"
@@ -25,3 +26,6 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+kustomize:
+	kubectl kustomize deploy/overlays/prd-apps

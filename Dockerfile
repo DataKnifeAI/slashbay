@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM harbor.dataknife.net/dockerhub/library/python:3.12-slim
 
 WORKDIR /app
 

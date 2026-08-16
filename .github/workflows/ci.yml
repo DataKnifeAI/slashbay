@@ -38,13 +38,28 @@ jobs:
       - name: Pytest
         run: pytest -q
 
+  manifests:
+    name: kustomize
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Render prd-apps overlay
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq kubectl
+          kubectl kustomize deploy/overlays/prd-apps >/dev/null
+
   push-to-gitlab:
     name: Push to GitLab
     uses: DataKnifeAI/github-workflows/.github/workflows/reusable-gitlab-mirror-push.yml@main
     needs:
       - test
+      - manifests
     if: >-
       always() && needs.test.result == 'success' &&
+      needs.manifests.result == 'success' &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
     secrets: inherit
     with:

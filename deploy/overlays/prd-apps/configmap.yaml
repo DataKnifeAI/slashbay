@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slashbay-config
+  namespace: slashbay
+  labels:
+    app: slashbay
+    app.kubernetes.io/name: slashbay
+data:
+  SLASHBAY_DRY_RUN: "true"
+  SLASHBAY_STATE_DSN: "sqlite:////data/slashbay.db"
+  SLASHBAY_REPO_ALLOWLIST: "DataKnifeAI/*"
+  SLASHBAY_TRIGGER_EVENTS: "opened,reopened"
+  SLASHBAY_MAX_CONCURRENT: "3"
+  SLASHBAY_TRIAGE_MODEL: "gpt-5-nano"
+  SLASHBAY_TRIAGE_ESCALATE_MODEL: "gpt-5.6-luna"
+  SLASHBAY_TRIAGE_ESCALATE_BELOW: "0.7"
+  CODER_ACCESS_URL: "https://coder.dataknife.net"
+  CODER_TEMPLATE: "dkai-agent"
+  CODER_WORKSPACE_OWNER: "me"
+  GITHUB_API_URL: "https://api.github.com"
+  GITLAB_API_URL: "https://gitlab.com/api/v4"

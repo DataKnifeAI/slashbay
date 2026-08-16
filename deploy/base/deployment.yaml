@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slashbay
+  namespace: slashbay
+  labels:
+    app: slashbay
+    app.kubernetes.io/name: slashbay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slashbay
+  template:
+    metadata:
+      labels:
+        app: slashbay
+        app.kubernetes.io/name: slashbay
+    spec:
+      serviceAccountName: slashbay
+      imagePullSecrets:
+        - name: harbor-registry-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: slashbay
+          image: harbor.dataknife.net/library/slashbay:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: slashbay-config
+            - secretRef:
+                name: slashbay-secrets
+                optional: true
+          env:
+            - name: SLASHBAY_HOST
+              value: "0.0.0.0"
+            - name: SLASHBAY_PORT
+              value: "8080"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: slashbay-data
+        - name: tmp
+          emptyDir: {}

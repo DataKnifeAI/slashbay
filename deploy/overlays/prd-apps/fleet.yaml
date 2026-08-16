@@ -1,0 +1,14 @@
+# Fleet configuration for prd-apps
+# Self-contained overlay - Fleet path: slashbay/overlays/prd-apps
+# (copy this tree to DataKnifeAI/gitops-dev; do not point Fleet at this app repo)
+apiVersion: fleet.cattle.io/v1alpha1
+kind: Bundle
+metadata:
+  name: slashbay-prd-apps
+  labels:
+    fleet.cattle.io/bundle-name: slashbay-prd-apps
+spec:
+  targetRestrictions:
+    - clusterSelector:
+        matchLabels:
+          management.cattle.io/cluster-display-name: prd-apps
