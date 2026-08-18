@@ -1,28 +1,15 @@
-"""Dispatch contract: how a dkai-agent workspace is told to run `agent -p`.
+"""Dispatch contract: job payload tells a warm dkai-agent to run `agent -p`.
 
-Slashbay is not a Cursor product and does not run a worker farm.
-
-Coding happens inside a Coder workspace created from
-`DataKnifeAI/coder-templates` template `dkai-agent`. That template already
-installs the Cursor CLI (`agent`), injects `CURSOR_API_KEY` from the
-`cursor_api_key` rich parameter, and can autostart `agent worker start`.
-
-Issue dispatch uses **prompt mode**, not a pool of `agent worker` processes:
+Slashbay is the queue. Warm workspaces already running in Coder pull jobs.
+Do not start `agent worker` for issue dispatch — prompt mode only:
 
     agent -p "$SLASHBAY_PROMPT"
 
-Delivery (workspace-side; do not fork coder-templates in this repo):
-
-1. Preferred: after the Coder agent is connected, run via
-   `coder ssh <workspace> -- agent -p ...` (or the Coder SSH API).
-2. Optional template hook: if `SLASHBAY_DISPATCH=1` and
-   `/tmp/slashbay-prompt.md` (or `$SLASHBAY_PROMPT`) is present, a startup
-   script in `dkai-agent` may invoke `agent -p`. Request that hook in
-   coder-templates if it is not there yet.
-
-Concurrency: one named human Cursor seat (`dataknife-coder-issue-bot`),
-2–5 concurrent jobs (`SLASHBAY_MAX_CONCURRENT`). Do not share one Pro key
-across a farm; do not create dummy bot seats.
+Concurrency is the number of warm `dkai-agent` pullers (2–5), not per-issue
+berths. Cursor CLI is the coding worker on one named human seat
+(`dataknife-coder-issue-bot`). Do not share one Pro key across a farm;
+do not create dummy bot seats. The pull token is a pool secret
+(`SLASHBAY_WORKER_TOKEN`), not a Cursor account.
 """
 
 from __future__ import annotations
@@ -34,9 +21,9 @@ from slashbay.webhooks.events import IssueEvent
 
 
 class DispatchPlan(BaseModel):
-    """Everything the berth needs so a human or hook can run `agent -p`."""
+    """Everything a puller needs to run `agent -p` on a claimed job."""
 
-    workspace_name: str
+    workspace_name: str = ""
     template: str = "dkai-agent"
     git_url: str
     command: list[str]
@@ -86,8 +73,8 @@ def build_dispatch_plan(
         env=env,
         rich_parameters=rich,
         notes=(
-            "Run `agent -p` inside the dkai-agent workspace after it is Started. "
-            "Cursor CLI is the coding worker; Slashbay only berths and dispatches. "
+            "Warm dkai-agent pullers claim this job and run `agent -p`. "
+            "Slashbay does not create workspaces or start `agent worker`. "
             "Key belongs to one paid human seat (dataknife-coder-issue-bot)."
         ),
     )

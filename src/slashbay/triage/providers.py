@@ -15,7 +15,7 @@ Classify a GitHub or GitLab issue for internal automation only.
 
 Return a single JSON object with exactly these keys:
 - action: "actionable" | "needs_info" | "skip"
-- start_workspace: boolean (true only when action is actionable and a coding workspace should start)
+- start_workspace: boolean (true only when action is actionable and a coding job should be queued)
 - comment: short markdown to post back on the issue
 - confidence: number between 0 and 1
 
@@ -65,7 +65,7 @@ class HeuristicTriage:
                     "start_workspace": False,
                     "comment": (
                         "Slashbay needs more detail (repro or acceptance criteria) "
-                        "before berthing a workspace."
+                        "before queueing a coding job."
                     ),
                     "confidence": 0.75,
                     "model": "heuristic",
@@ -75,7 +75,7 @@ class HeuristicTriage:
             {
                 "action": "actionable",
                 "start_workspace": True,
-                "comment": "Slashbay will berth a Coder workspace and dispatch a coding agent.",
+                "comment": "queued for a warm workspace",
                 "confidence": 0.72,
                 "model": "heuristic",
             }

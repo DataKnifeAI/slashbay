@@ -9,8 +9,9 @@ Required keys (same names as [`.env.example`](../../.env.example)):
 | Key | Purpose |
 |-----|---------|
 | `OPENAI_API_KEY` | Cheap-LLM triage. Empty → heuristic classifier |
-| `CURSOR_API_KEY` | Injected into the Coder workspace as `cursor_api_key` |
-| `CODER_TOKEN` | Coder API token that can create/start `dkai-agent` workspaces |
+| `SLASHBAY_WORKER_TOKEN` | Pool secret for warm `dkai-agent` pullers (`Authorization: Bearer`) |
+| `CURSOR_API_KEY` | Unused by the API; set `cursor_api_key` on warm workspaces instead |
+| `CODER_TOKEN` | Optional. List/health of warm workspaces only (no create/start) |
 | `GITHUB_WEBHOOK_SECRET` | HMAC for `X-Hub-Signature-256` |
 | `GITHUB_TOKEN` | Comments/labels on GitHub issues |
 | `GITLAB_WEBHOOK_TOKEN` | Shared token for `X-Gitlab-Token` |
@@ -21,6 +22,7 @@ kubectl create namespace slashbay --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret generic slashbay-secrets -n slashbay \
   --from-literal=OPENAI_API_KEY='...' \
+  --from-literal=SLASHBAY_WORKER_TOKEN='...' \
   --from-literal=CURSOR_API_KEY='...' \
   --from-literal=CODER_TOKEN='...' \
   --from-literal=GITHUB_WEBHOOK_SECRET='...' \
@@ -49,4 +51,4 @@ Use the org Harbor robot account (see [gitops-tools Harbor docs](https://github.
 
 1. Namespace + both secrets
 2. Apply `deploy/overlays/prd-apps` (or the copy in gitops-dev)
-3. Set `SLASHBAY_DRY_RUN=false` on ConfigMap `slashbay-config` when ready to berth workspaces
+3. Set `SLASHBAY_DRY_RUN=false` on ConfigMap `slashbay-config` when secrets and 2–5 warm `dkai-agent` pullers are ready

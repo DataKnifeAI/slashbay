@@ -67,5 +67,5 @@ def test_github_accepts_signed_issue(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert data["accepted"] is True
-    assert data["status"] in {"running", "commented", "triaged"}
+    assert data["status"] in {"queued", "commented", "triaged"}
     assert data["run_id"]

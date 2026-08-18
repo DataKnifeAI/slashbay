@@ -1,10 +1,11 @@
-"""Coder HTTP client for berthing a workspace from the dkai-agent template.
+"""Coder HTTP client for list/health of warm dkai-agent workspaces.
 
-Required env (see `.env.example`):
+Required env (see `.env.example`) when capacity listing is enabled:
 - CODER_ACCESS_URL  e.g. https://coder.dataknife.net
-- CODER_TOKEN       session / API token with permission to create workspaces
-- CODER_TEMPLATE    template name, default `dkai-agent`
-  (lives in DataKnifeAI/coder-templates — do not copy the template here)
+- CODER_TOKEN       session / API token with permission to list workspaces
+
+Herald does **not** create or start workspaces. Warm `dkai-agent` workspaces
+pull jobs from Slashbay. This client is optional GET-only capacity.
 
 This module talks to Coder's API. It does not vendor templates or start a
 Cursor worker pool.
@@ -31,13 +32,17 @@ class CoderError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class CreatedWorkspace:
+class WorkspaceInfo:
     id: str
     name: str
     template: str
     status: str
     url: str
     raw: dict[str, Any]
+
+
+# Back-compat alias for imports that still say CreatedWorkspace.
+CreatedWorkspace = WorkspaceInfo
 
 
 def workspace_name(owner: str, repo: str, number: int, run_id: str) -> str:
@@ -57,63 +62,37 @@ class CoderClient:
         if self._owns_client:
             await self._client.aclose()
 
-    async def find_template_id(self, name: str | None = None) -> str:
-        template = name or self._settings.coder_template
-        response = await self._client.get("/api/v2/templates", params={"q": f"name:{template}"})
+    async def health(self) -> bool:
+        response = await self._client.get("/api/v2/buildinfo")
         if response.status_code >= 400:
-            raise CoderError(f"list templates failed: {response.status_code} {response.text}")
-        items = response.json()
-        if isinstance(items, dict):
-            items = items.get("templates") or items.get("items") or []
-        for item in items:
-            if item.get("name") == template:
-                return str(item["id"])
-        raise CoderError(f"template {template!r} not found at {self._settings.coder_access_url}")
+            raise CoderError(f"coder health failed: {response.status_code} {response.text}")
+        return True
 
-    async def create_workspace(
-        self,
-        *,
-        name: str,
-        rich_parameters: dict[str, str],
-        template_id: str | None = None,
-    ) -> CreatedWorkspace:
-        template_id = template_id or await self.find_template_id()
+    async def list_workspaces(self) -> list[WorkspaceInfo]:
         owner = self._settings.coder_workspace_owner or "me"
-        body: dict[str, Any] = {
-            "name": name,
-            "template_id": template_id,
-            "rich_parameter_values": [
-                {"name": key, "value": value} for key, value in rich_parameters.items()
-            ],
-        }
-        response = await self._client.post(f"/api/v2/users/{owner}/workspaces", json=body)
+        response = await self._client.get(f"/api/v2/users/{owner}/workspaces")
         if response.status_code >= 400:
-            raise CoderError(f"create workspace failed: {response.status_code} {response.text}")
+            raise CoderError(f"list workspaces failed: {response.status_code} {response.text}")
         data = response.json()
-        return self._to_workspace(data)
+        items = data
+        if isinstance(data, dict):
+            items = data.get("workspaces") or data.get("items") or []
+        return [self._to_workspace(item) for item in items if isinstance(item, dict)]
 
-    async def start_workspace(self, workspace_id: str) -> CreatedWorkspace:
-        response = await self._client.post(
-            f"/api/v2/workspaces/{workspace_id}/builds",
-            json={"transition": "start"},
-        )
-        if response.status_code >= 400:
-            raise CoderError(f"start workspace failed: {response.status_code} {response.text}")
-        data = response.json()
-        workspace = data.get("workspace") or data
-        return self._to_workspace(workspace)
-
-    def _to_workspace(self, data: dict[str, Any]) -> CreatedWorkspace:
+    def _to_workspace(self, data: dict[str, Any]) -> WorkspaceInfo:
         workspace_id = str(data.get("id") or "")
         name = str(data.get("name") or "")
         latest = data.get("latest_build") or {}
         status = str(latest.get("status") or data.get("status") or "pending")
+        template = str(
+            data.get("template_name") or data.get("template") or self._settings.coder_template
+        )
         base = self._settings.coder_access_url.rstrip("/")
         url = f"{base}/@{self._settings.coder_workspace_owner}/{name}" if name else base
-        return CreatedWorkspace(
+        return WorkspaceInfo(
             id=workspace_id,
             name=name,
-            template=self._settings.coder_template,
+            template=template,
             status=status,
             url=url,
             raw=data,

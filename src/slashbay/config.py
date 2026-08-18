@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     port: int = Field(default=8080, alias="SLASHBAY_PORT")
     dry_run: bool = Field(default=True, alias="SLASHBAY_DRY_RUN")
     state_dsn: str = Field(default="memory://", alias="SLASHBAY_STATE_DSN")
+    public_url: str = Field(default="", alias="SLASHBAY_URL")
+    worker_token: str = Field(default="", alias="SLASHBAY_WORKER_TOKEN")
+    job_lease_seconds: int = Field(default=900, alias="SLASHBAY_JOB_LEASE_SECONDS")
 
     repo_allowlist: str = Field(default="DataKnifeAI/*", alias="SLASHBAY_REPO_ALLOWLIST")
     trigger_events: str = Field(default="opened,reopened", alias="SLASHBAY_TRIGGER_EVENTS")
