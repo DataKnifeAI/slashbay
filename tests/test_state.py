@@ -42,3 +42,21 @@ def test_sqlite_roundtrip(tmp_path: Path) -> None:
 
 def test_build_store_memory() -> None:
     assert isinstance(build_store("memory://"), MemoryStore)
+
+
+def test_claim_is_atomic_and_lease_returns_to_queue() -> None:
+    store = MemoryStore()
+    run = store.put(_run())
+    run.status = RunStatus.queued
+    store.put(run)
+    first = store.claim_next("warm-1", lease_seconds=900)
+    assert first is not None
+    assert first.claimed_by == "warm-1"
+    assert store.claim_next("warm-2", lease_seconds=900) is None
+    first.last_progress_at = first.last_progress_at.replace(year=2000)
+    store.put(first)
+    store.expire_leases(lease_seconds=1)
+    again = store.claim_next("warm-2", lease_seconds=1)
+    assert again is not None
+    assert again.id == first.id
+    assert again.claimed_by == "warm-2"

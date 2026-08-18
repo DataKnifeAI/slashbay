@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import logging
 
-from slashbay.coder.client import CoderClient, CoderError, workspace_name
 from slashbay.config import Settings
-from slashbay.dispatch.contract import DispatchPlan, build_dispatch_plan
-from slashbay.state.models import IssueRef, Run, RunStatus, WorkspaceRef
+from slashbay.jobs.queue import JobsQueue, issue_ref
+from slashbay.state.models import Run, RunStatus
 from slashbay.state.store import Store
 from slashbay.triage.models import TriageAction
 from slashbay.triage.providers import TriageProvider
@@ -19,6 +18,8 @@ LABEL = {
     TriageAction.skip: "slashbay:skipped",
 }
 
+QUEUED_COMMENT = "queued for a warm workspace"
+
 
 class Herald:
     def __init__(
@@ -27,26 +28,22 @@ class Herald:
         store: Store,
         triage: TriageProvider,
         publisher,
-        coder: CoderClient | None = None,
+        queue: JobsQueue,
     ) -> None:
         self.settings = settings
         self.store = store
         self.triage = triage
         self.publisher = publisher
-        self.coder = coder
+        self.queue = queue
 
-    async def handle(self, issue: IssueEvent | None) -> Run | None:
+    async def handle(self, issue: IssueEvent | None, *, delivery_id: str = "") -> Run | None:
         if issue is None:
             return None
-        run = Run(
-            issue=IssueRef(
-                platform=issue.platform,
-                owner=issue.owner,
-                repo=issue.repo,
-                number=issue.number,
-                url=issue.url,
-            )
-        )
+        existing = self.queue.existing(delivery_id=delivery_id, issue_key=issue_ref(issue).key)
+        if existing is not None:
+            return existing
+
+        run = Run(issue=issue_ref(issue), delivery_id=delivery_id)
         if not repo_allowed(issue.full_name, self.settings.allowlist_patterns()):
             run.status = RunStatus.ignored
             run.error = f"repo {issue.full_name} not allowlisted"
@@ -64,71 +61,42 @@ class Herald:
         result = await self.triage.triage(issue)
         run.triage = result
         run.status = RunStatus.triaged
-        self.store.put(run)
 
         if result.action is TriageAction.skip:
             run.status = RunStatus.skipped
         elif result.action is TriageAction.needs_info:
             run.status = RunStatus.needs_info
-        elif result.start_workspace:
-            if self.store.count_active() > self.settings.max_concurrent:
-                run.status = RunStatus.failed
-                run.error = "max concurrent workspaces reached"
-            else:
-                run = await self._berth(run, issue)
+        elif result.start_workspace or result.action is TriageAction.actionable:
+            run = await self.queue.enqueue(run, issue)
 
         self.store.put(run)
         await self._publish(issue, run)
         return self.store.put(run)
 
-    async def _berth(self, run: Run, issue: IssueEvent) -> Run:
-        name = workspace_name(issue.owner, issue.repo, issue.number, run.id)
-        plan: DispatchPlan = build_dispatch_plan(
-            issue, run_id=run.id, workspace_name=name, settings=self.settings
-        )
-        run.extra["dispatch"] = plan.model_dump()
-        if self.settings.dry_run or self.coder is None:
-            run.status = RunStatus.running
-            run.workspace = WorkspaceRef(
-                id="dry-run",
-                name=name,
-                template=plan.template,
-                status="dry-run",
-            )
-            return run
-        run.status = RunStatus.berthing
-        self.store.put(run)
-        try:
-            created = await self.coder.create_workspace(
-                name=name, rich_parameters=plan.rich_parameters
-            )
-            started = await self.coder.start_workspace(created.id)
-            run.workspace = WorkspaceRef(
-                id=started.id or created.id,
-                name=started.name or created.name,
-                template=plan.template,
-                status=started.status,
-                url=started.url,
-            )
-            run.status = RunStatus.running
-        except CoderError as exc:
-            log.exception("coder berth failed")
-            run.status = RunStatus.failed
-            run.error = str(exc)
-        return run
-
     async def _publish(self, issue: IssueEvent, run: Run) -> None:
         if run.status is RunStatus.ignored:
             return
-        comment = (run.triage.comment if run.triage else "") or run.error
-        if run.workspace and run.workspace.url:
-            comment = f"{comment}\n\nWorkspace: {run.workspace.url}"
+        if run.status is RunStatus.queued:
+            comment = QUEUED_COMMENT
+            if "queued" in run.commented_keys():
+                return
+        else:
+            comment = (run.triage.comment if run.triage else "") or run.error
         if comment:
             await self.publisher.comment(issue, comment)
+            if run.status is RunStatus.queued:
+                run.mark_commented("queued")
         label = LABEL.get(run.triage.action) if run.triage else None
         if run.status is RunStatus.failed:
             label = "slashbay:failed"
         if label:
             await self.publisher.label(issue, [label])
-        if run.status not in {RunStatus.failed, RunStatus.berthing, RunStatus.running}:
+        if run.status not in {
+            RunStatus.failed,
+            RunStatus.queued,
+            RunStatus.claimed,
+            RunStatus.cloning,
+            RunStatus.agent_running,
+            RunStatus.done,
+        }:
             run.status = RunStatus.commented

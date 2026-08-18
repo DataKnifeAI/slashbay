@@ -9,6 +9,8 @@ metadata:
 data:
   SLASHBAY_DRY_RUN: "true"
   SLASHBAY_STATE_DSN: "sqlite:////data/slashbay.db"
+  SLASHBAY_URL: "https://slashbay.dataknife.net"
+  SLASHBAY_JOB_LEASE_SECONDS: "900"
   SLASHBAY_REPO_ALLOWLIST: "DataKnifeAI/*"
   SLASHBAY_TRIGGER_EVENTS: "opened,reopened"
   SLASHBAY_MAX_CONCURRENT: "3"
