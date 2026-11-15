@@ -6,8 +6,13 @@ Slashbay owns **intake, classification, berth, and dispatch** for internal DataK
 
 | Sibling | Role vs Slashbay |
 |---------|------------------|
+<<<<<<< Updated upstream
 | **[nauarchos](https://github.com/DataKnifeAI/nauarchos)** | Future Kubernetes fleet control plane (classes, sandboxes, on-demand workers). Slashbay is today’s herald on Coder; Nauarchos is the longer-term cluster admiral. |
 | **[dioptra](https://github.com/DataKnifeAI/dioptra)** | Observe-only fleet status board. Slashbay acts; Dioptra watches. |
+=======
+| **[helmrail](https://github.com/DataKnifeAI/helmrail)** | Future Kubernetes fleet control plane (classes, sandboxes, on-demand workers). Slashbay is today’s herald + queue; Helmrail is the longer-term control rail. |
+| **[fleetshade](https://github.com/DataKnifeAI/fleetshade)** | Observe-only fleet status board. Slashbay acts; Fleetshade watches. |
+>>>>>>> Stashed changes
 
 ## What it does
 
@@ -43,8 +48,8 @@ flowchart TD
 | [agent-skills](https://github.com/DataKnifeAI/agent-skills) | Shared skills installed in those workspaces |
 | [gitops-dev](https://github.com/DataKnifeAI/gitops-dev) | Coder platform delivery |
 | [rancher-deploy](https://github.com/DataKnifeAI/rancher-deploy) | Clusters the workspaces run on |
-| [nauarchos](https://github.com/DataKnifeAI/nauarchos) | Future K8s fleet (not a runtime dependency today) |
-| [dioptra](https://github.com/DataKnifeAI/dioptra) | Observe-only dashboard |
+| [helmrail](https://github.com/DataKnifeAI/helmrail) | Future K8s fleet (not a runtime dependency today) |
+| [fleetshade](https://github.com/DataKnifeAI/fleetshade) | Observe-only dashboard |
 
 ## Dispatch contract
 
