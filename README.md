@@ -6,13 +6,8 @@ Slashbay owns **intake, classification, berth, and dispatch** for internal DataK
 
 | Sibling | Role vs Slashbay |
 |---------|------------------|
-<<<<<<< Updated upstream
-| **[nauarchos](https://github.com/DataKnifeAI/nauarchos)** | Future Kubernetes fleet control plane (classes, sandboxes, on-demand workers). Slashbay is today’s herald on Coder; Nauarchos is the longer-term cluster admiral. |
-| **[dioptra](https://github.com/DataKnifeAI/dioptra)** | Observe-only fleet status board. Slashbay acts; Dioptra watches. |
-=======
-| **[helmrail](https://github.com/DataKnifeAI/helmrail)** | Future Kubernetes fleet control plane (classes, sandboxes, on-demand workers). Slashbay is today’s herald + queue; Helmrail is the longer-term control rail. |
+| **[helmrail](https://github.com/DataKnifeAI/helmrail)** | Future Kubernetes fleet control plane (classes, sandboxes, on-demand workers). Slashbay is today’s herald on Coder; Helmrail is the longer-term control rail. |
 | **[fleetshade](https://github.com/DataKnifeAI/fleetshade)** | Observe-only fleet status board. Slashbay acts; Fleetshade watches. |
->>>>>>> Stashed changes
 
 ## What it does
 
