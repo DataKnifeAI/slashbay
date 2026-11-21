@@ -1,5 +1,8 @@
 # Slashbay
 
+![Slashbay — issue tickets berthing into agent workspace pods](docs/assets/slashbay-hero.jpg)
+
+
 **Slashbay** — DataKnifeAI’s issue-webhook herald: issues dock here, cheap-LLM triage decides if they are work, and a Coder workspace is berthed for a coding agent.
 
 Slashbay owns **intake, classification, berth, and dispatch** for internal DataKnifeAI repositories. It is not a resold Cursor service. Cursor CLI is a coding worker we dispatch into, not the product identity.
